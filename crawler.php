@@ -1,6 +1,17 @@
 <?php
-function crawl($url,$seen_links = array()){
-    $b = file_get_contents($url); 	//getting the page content
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+function crawl($url,$max_deep = 10,$seen_links = array(),$deep = 1){
+    $domain = parse_url($url, 1);
+    if($domain == NULL){
+        $domain = parse_url($url, -1);
+        $domain = str_replace('www.', '', $domain['path']);
+        $domain = 'http://' . $domain;
+    }
+    //var_dump($domain);
+    //die();
+    $b = file_get_contents($domain); 	//getting the page content
     //check if seen array has been defined
     if(!isset($seen) || $seen == NULL){
         $seen = array();				//seen urls
@@ -8,9 +19,9 @@ function crawl($url,$seen_links = array()){
     $seen = $seen_links;
     array_push($seen,$url);
     $tmp_links = array();			//tmp list of <a> objects
-    $linksToDo = array();			//links to vist
-    $out_links = array();			//links leading outside
-    $domain = 'setting.domain.here';//define domain
+    $linksToDo = array();			//links to visit
+    //$out_links = array();			//links leading outside
+
 
     //getting all the <a href=".*"> values
     $doc = new DOMDocument('1.0');
@@ -72,7 +83,13 @@ function crawl($url,$seen_links = array()){
         return;
     }
     //crawling the 1st unseen link form an array
-    crawl(reset($linksToDo), $seen);
+    $deep++;
+    if($deep <= $max_deep) {
+        crawl(reset($linksToDo),$max_deep, $seen, $deep);
+    } else {
+        return;
+    }
 }
-crawl('domain.set.here');
-?>
+$domain = $_POST['url'];
+$max_deep = $_POST['deep'];
+crawl($domain, $max_deep);
