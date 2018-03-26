@@ -1,17 +1,16 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
+//error_reporting(E_ALL);
+//ini_set('display_errors', 1);
+$start = microtime(true);
 function crawl($url,$max_deep = 10,$seen_links = array(),$deep = 1){
-    $domain = parse_url($url, 1);
-    if($domain == NULL){
-        $domain = parse_url($url, -1);
-        $domain = str_replace('www.', '', $domain['path']);
-        $domain = 'http://' . $domain;
+    if ((stristr($url, 'http') == FALSE) || (stristr($url,'https://'))){
+        $url = 'http://' . $url;
     }
-    //var_dump($domain);
-    //die();
-    $b = file_get_contents($domain); 	//getting the page content
+    $domain = parse_url($url,PHP_URL_HOST);
+    $path = parse_url($url, PHP_URL_PATH);
+
+    $link = 'http://' . $domain . $path;
+
     //check if seen array has been defined
     if(!isset($seen) || $seen == NULL){
         $seen = array();				//seen urls
@@ -23,9 +22,10 @@ function crawl($url,$max_deep = 10,$seen_links = array(),$deep = 1){
     //$out_links = array();			//links leading outside
 
 
+
     //getting all the <a href=".*"> values
     $doc = new DOMDocument('1.0');
-    @$doc->loadHTMLFile($url);
+    @$doc->loadHTMLFile($link);
     $links = $doc->getElementsByTagName('a');
 
     //creating a temporary link array
@@ -33,6 +33,7 @@ function crawl($url,$max_deep = 10,$seen_links = array(),$deep = 1){
         array_push($tmp_links, $element->getAttribute('href'));
         $tmp_links = str_replace('../','',$tmp_links);
     }
+
     $tmp_links = array_unique($tmp_links);	//cleaning the array
 
     //setting an array for links to visit
@@ -63,22 +64,31 @@ function crawl($url,$max_deep = 10,$seen_links = array(),$deep = 1){
         }
     }
 
-    //cleanign the array
+    //cleaning the array
     $linksToDo = array_unique($linksToDo);
     $linksToDo = array_diff($linksToDo, $seen);
 
     //getting the SEO data:
-    preg_match('#<title>(.*)</title>#Umsi',$b,$title);
+    $titleObject = $doc->getElementsByTagName('title');
+    $title = $titleObject->item(0)->nodeValue;
+
+    $descObject = $doc->getElementsByTagName('meta');
+    foreach($descObject as $object){
+        if($object->getAttribute('name') == 'description'){
+            $desc = $object->getAttribute('content');
+        } elseif ($object->getAttribute('name') == 'keywords'){
+            $keywords = $object->getAttribute('content');
+        }
+    }
+
     if(!isset($title) || $title == NULL){ $title[1]='No title on the page';}
-    preg_match('#name="description" content="(.*)"#',$b,$desc);
     if(!isset($desc) || $desc == NULL){ $desc[1]='No description on the page';}
-    preg_match('#name="keywords" content="(.*)"#',$b,$keywords);
-    if(!isset($keywords) || $keywords == NULL){ $keywords[1]='No keywords on the page';}
+    if(!isset($keywords) || $keywords == NULL){ $keywords='No keywords on the page';}
     // display the results
     echo 'Testing: <strong>'.$url.'</strong><br />';
-    echo 'Title: <strong>'.$title[1].'</strong><br/>';
-    echo 'Description: <strong>'.$desc[1].'</strong><br/>';
-    echo 'Keywords: <strong>'.$keywords[1].'</strong><br/><br/>';
+    echo 'Title: <strong>'.$title.'</strong><br/>';
+    echo 'Description: <strong>'.$desc.'</strong><br/>';
+    echo 'Keywords: <strong>'.$keywords.'</strong><br/><br/>';
     if($linksToDo == NULL){
         return;
     }
@@ -91,5 +101,6 @@ function crawl($url,$max_deep = 10,$seen_links = array(),$deep = 1){
     }
 }
 $domain = $_POST['url'];
-$max_deep = $_POST['deep'];
+$max_deep = intval($_POST['deep']);
 crawl($domain, $max_deep);
+echo 'Script executed in ' . number_format((microtime(true) - $start),2) . ' sec';
