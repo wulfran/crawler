@@ -2,7 +2,7 @@
 //error_reporting(E_ALL);
 //ini_set('display_errors', 1);
 $start = microtime(true);
-function crawl($url,$max_deep = 10,$seen_links = array(),$deep = 1){
+function crawl($url,$max_deep = 10,$seen_links = array(),$deep = 1, &$page_info = array()){
     if ((stristr($url, 'http') == FALSE) || (stristr($url,'https://'))){
         $url = 'http://' . $url;
     }
@@ -85,22 +85,35 @@ function crawl($url,$max_deep = 10,$seen_links = array(),$deep = 1){
     if(!isset($desc) || $desc == NULL){ $desc[1]='No description on the page';}
     if(!isset($keywords) || $keywords == NULL){ $keywords='No keywords on the page';}
     // display the results
-    echo 'Testing: <strong>'.$url.'</strong><br />';
-    echo 'Title: <strong>'.$title.'</strong><br/>';
-    echo 'Description: <strong>'.$desc.'</strong><br/>';
-    echo 'Keywords: <strong>'.$keywords.'</strong><br/><br/>';
+//    echo 'Testing: <strong>'.$url.'</strong><br />';
+//    echo 'Title: <strong>'.$title.'</strong><br/>';
+//    echo 'Description: <strong>'.$desc.'</strong><br/>';
+//    echo 'Keywords: <strong>'.$keywords.'</strong><br/><br/>';
+
+    $page_info[] = [
+        'url' => $url,
+        'title' => $title,
+        'desc' => $desc,
+        'keywords' => $keywords
+    ];
     if($linksToDo == NULL){
-        return;
+        return $page_info;
     }
     //crawling the 1st unseen link form an array
     $deep++;
     if($deep <= $max_deep) {
-        crawl(reset($linksToDo),$max_deep, $seen, $deep);
+        crawl(reset($linksToDo),$max_deep, $seen, $deep,$page_info);
     } else {
-        return;
+        return $page_info;
     }
+    return $page_info;
 }
 $domain = $_POST['url'];
 $max_deep = intval($_POST['deep']);
-crawl($domain, $max_deep);
-echo 'Script executed in ' . number_format((microtime(true) - $start),2) . ' sec';
+$data = crawl($domain, $max_deep);
+$data[] = [
+    'executionTime' => (microtime(true) - $start)
+];
+header('Content-type: application/json');
+echo json_encode( $data );
+//echo 'Script executed in ' . number_format((microtime(true) - $start),2) . ' sec';
