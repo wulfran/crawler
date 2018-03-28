@@ -1,9 +1,6 @@
 <html>
 <head>
-    <script
-            src="https://code.jquery.com/jquery-3.3.1.js"
-            integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60="
-            crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.js" integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60=" crossorigin="anonymous"></script>
 	<title>Simple crawler project</title>
 	<meta name="robots" content="noindex, nofollow"/>
 	<!-- Latest compiled and minified CSS -->
@@ -17,7 +14,7 @@
 
 	<style>
 		.top-bar{
-			background-color: cyan;
+			background-color: #a7a7a7;
 		}
 		.logo{
 			font-size: 27px;
@@ -27,24 +24,20 @@
 			margin-left: 25px;
 		}
 		.content{
-			background-color: lightgray;
+			background-color: #d3d3d3;
 		}
 		.form-group{
 			text-align: center;
 		}
-        #result{
+        #panels{
             display: none;
-            margin-top: 15px;
-        }
-        .lp{
-            width: 5%;
-        }
-        .page_url{
-            max-width: 10%;
         }
         #loading_gif{
             display: none;
             margin-top: 10px;
+        }
+        .panel_body{
+            display: none;
         }
 	</style>
 </head>
@@ -84,26 +77,22 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-lg-10 col-md-4 col-md-offset-4 col-lg-offset-1" id="result">
+            <div id="panels">
 
-                <table class="table .table-striped">
-                    <thead>
-                    <th class="lp">lp.</th>
-                    <th class="page_url">URL</th>
-                    <th class="page_title">Title</th>
-                    <th class="page_desc">Description</th>
-                    <th class="page_kw">Keywords</th>
-                    </thead>
-                    <tbody id="table_body">
-
-                    </tbody>
-                </table>
             </div>
         </div>
 	</div>
     <script>
+        function showPanel(id) {
+            if($("#panel_body_" + id).css("display") === "none"){
+                $("#panel_body_" + id).fadeIn();
+            } else {
+                $("#panel_body_" + id).fadeOut();
+            }
+        }
         $("#executeCrawl").click(function(){
-            $('#table_body>tr').remove();
+            $("#panels>div").remove();
+            $('#execution').remove();
             $('#loading_gif').show();
             let data = {url:$("#url").val(), deep: $("#deep").val()};
             $.ajax({
@@ -117,10 +106,13 @@
                     let i = 0;
                     let max = o.length - 1;
                     while(i<max){
-
-                        $("#table_body").append('<tr><td class="lp">' + (i+1) + '</td><td class="page_url">' + o[i]['url'] + '</td><td>' + o[i]['title'] + '</td><td>' + o[i]['desc'] + '</td><td>' + o[i]['keywords'] + '</td><tr>');
+                        $("#panels").show();
+                        let rowPanel = '<div class="panel panel-default"><div class="panel-heading" id="' + i + '" onclick="showPanel(id)">' + o[i]['url'] +'</div><div class="panel-body panel_body" id="panel_body_' + i + '"><strong>Title: </strong>' + o[i]['title'] + '<hr><strong>Description: </strong>' + o[i]['desc'] + '<hr><strong>Keywords: </strong> ' + o[i]['keywords'] + ' </div></div>';
+                        $("#panels").append(rowPanel);
                         i++;
                     }
+                    let execution =(o[max]['executionTime']);
+                    $("#panels").prepend('<p id="execution"> Script executed in: ' + execution.toFixed(2) + ' sec</p>');
                 }
             });
         });

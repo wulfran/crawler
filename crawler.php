@@ -3,13 +3,12 @@
 //ini_set('display_errors', 1);
 $start = microtime(true);
 function crawl($url,$max_deep = 10,$seen_links = array(),$deep = 1, &$page_info = array()){
-    if ((stristr($url, 'http') == FALSE) || (stristr($url,'https://'))){
+    if ((stristr($url, 'http') == FALSE) && (stristr($url,'https://') == FALSE)){
         $url = 'http://' . $url;
     }
     $domain = parse_url($url,PHP_URL_HOST);
     $path = parse_url($url, PHP_URL_PATH);
-
-    $link = 'http://' . $domain . $path;
+    $current_link = 'http://' . $domain . $path;
 
     //check if seen array has been defined
     if(!isset($seen) || $seen == NULL){
@@ -21,28 +20,25 @@ function crawl($url,$max_deep = 10,$seen_links = array(),$deep = 1, &$page_info 
     $linksToDo = array();			//links to visit
     //$out_links = array();			//links leading outside
 
-
-
     //getting all the <a href=".*"> values
     $doc = new DOMDocument('1.0');
-    @$doc->loadHTMLFile($link);
+    @$doc->loadHTMLFile($current_link);
     $links = $doc->getElementsByTagName('a');
 
     //creating a temporary link array
     foreach ($links as $element){
-        array_push($tmp_links, $element->getAttribute('href'));
-        $tmp_links = str_replace('../','',$tmp_links);
+        if($element->getAttribute('href') != '/') {
+            array_push($tmp_links, $element->getAttribute('href'));
+            $tmp_links = str_replace('../', '', $tmp_links);
+        }
     }
-
     $tmp_links = array_unique($tmp_links);	//cleaning the array
 
     //setting an array for links to visit
     foreach($tmp_links as $link){
         //if href is an proper url:
         if(!filter_var($link,FILTER_VALIDATE_URL)){
-            if(stristr($link,'http') || stristr($link,'https://')){
-                //no action needed
-            }else{
+            if(!stristr($link,'http') || !stristr($link,'https://')){
                 //setting the link to a proper form
                 $link = ltrim($link,'/');
                 $domain = rtrim($domain,'/');
@@ -70,26 +66,20 @@ function crawl($url,$max_deep = 10,$seen_links = array(),$deep = 1, &$page_info 
 
     //getting the SEO data:
     $titleObject = $doc->getElementsByTagName('title');
-    $title = $titleObject->item(0)->nodeValue;
-
+    $title = trim($titleObject->item(0)->nodeValue);
     $descObject = $doc->getElementsByTagName('meta');
     foreach($descObject as $object){
         if($object->getAttribute('name') == 'description'){
-            $desc = $object->getAttribute('content');
+            $desc = trim($object->getAttribute('content'));
         } elseif ($object->getAttribute('name') == 'keywords'){
-            $keywords = $object->getAttribute('content');
+            $keywords = trim($object->getAttribute('content'));
         }
     }
-
     if(!isset($title) || $title == NULL){ $title[1]='No title on the page';}
     if(!isset($desc) || $desc == NULL){ $desc[1]='No description on the page';}
     if(!isset($keywords) || $keywords == NULL){ $keywords='No keywords on the page';}
-    // display the results
-//    echo 'Testing: <strong>'.$url.'</strong><br />';
-//    echo 'Title: <strong>'.$title.'</strong><br/>';
-//    echo 'Description: <strong>'.$desc.'</strong><br/>';
-//    echo 'Keywords: <strong>'.$keywords.'</strong><br/><br/>';
 
+    //setting array with the results:
     $page_info[] = [
         'url' => $url,
         'title' => $title,
@@ -111,9 +101,9 @@ function crawl($url,$max_deep = 10,$seen_links = array(),$deep = 1, &$page_info 
 $domain = $_POST['url'];
 $max_deep = intval($_POST['deep']);
 $data = crawl($domain, $max_deep);
+
 $data[] = [
     'executionTime' => (microtime(true) - $start)
 ];
 header('Content-type: application/json');
 echo json_encode( $data );
-//echo 'Script executed in ' . number_format((microtime(true) - $start),2) . ' sec';
